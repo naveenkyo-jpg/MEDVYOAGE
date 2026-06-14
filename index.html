@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MediVoyage — Care Without Borders | Shivarama Pty Ltd</title>
+<meta name="description" content="Agentic medical tourism platform — discover hospitals, surgeons and clinics worldwide and plan the whole journey. A Shivarama Pty Ltd service."/>
+<meta name="theme-color" content="#102A2C"/>
+<style>html,body{margin:0;height:100%;background:#EBF0EF}#root{min-height:100%}
+#boot{position:fixed;inset:0;display:grid;place-items:center;font-family:system-ui,sans-serif;color:#5F7572;background:#EBF0EF;z-index:9999}
+#boot .b{width:34px;height:34px;border:3px solid #D6DFDD;border-top-color:#0E8F84;border-radius:50%;animation:s .8s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}</style>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="boot"><div class="b"></div></div>
+<div id="root"></div>
+<script type="text/babel" data-presets="react" data-type="module">
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ============================================================
+   MEDIVOYAGE — Agentic Medical Tourism Platform
+   Two interfaces (Patient + Admin) · subscription tiers ·
+   HIPAA-aware records vault · regional donor registry ·
+   complaints intake · API connectors · live AI agents.
+   Single-file React · in-memory state · zero-cost.
+
+   PROTOTYPE NOTICE: demonstrates security & compliance CONTROLS.
+   Not HIPAA/Privacy-Act certified. Do not enter real patient data.
+   ============================================================ */
+
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{
+  --ink:#102A2C;--ink2:#1C3D3E;--jade:#0E8F84;--jade-deep:#0B6E66;--jade-soft:#DCEEEB;
+  --surface:#EBF0EF;--paper:#FFFFFF;--line:#D6DFDD;--mist:#5F7572;
+  --signal:#E8623D;--signal-soft:#FCE7DF;--amber:#D8A23E;--ok:#1F9E78;--red:#C2402A;
+  --blue:#3B7DD8;--violet:#7C5BD8;--shadow:0 1px 2px rgba(16,42,44,.06),0 8px 24px rgba(16,42,44,.06);
+}
+*{box-sizing:border-box}
+.mv{font-family:'Inter',system-ui,sans-serif;color:var(--ink);background:var(--surface);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.45}
+.mono{font-family:'JetBrains Mono',monospace}.disp{font-family:'Space Grotesk',sans-serif}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* shell */
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+.rail{background:var(--ink);color:#CFE0DD;display:flex;flex-direction:column;padding:16px 13px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 8px 14px}
+.brand .glyph{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--jade),var(--signal));display:grid;place-items:center;color:#fff;font-weight:700;flex:none}
+.brand b{font-family:'Space Grotesk';font-weight:700;font-size:16px;color:#fff}
+.brand small{display:block;font-size:9px;letter-spacing:.18em;color:#7FA39E;text-transform:uppercase;margin-top:1px}
+.roleswitch{display:flex;background:#ffffff12;border-radius:9px;padding:3px;margin:0 4px 12px}
+.roleswitch button{flex:1;font-size:11.5px;font-weight:600;padding:7px;border-radius:7px;color:#9FBCB7}
+.roleswitch button.on{background:var(--jade);color:#fff}
+.nav{display:flex;flex-direction:column;gap:1px}
+.nav .grp{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#5E7C78;padding:12px 11px 5px;font-weight:600}
+.nav button{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;color:#A9C4C0;font-size:13px;font-weight:500;text-align:left;width:100%;transition:.15s}
+.nav button:hover{background:#ffffff10;color:#fff}
+.nav button.on{background:var(--jade);color:#fff}
+.nav .ic{width:16px;display:grid;place-items:center;flex:none}
+.nav .lk{margin-left:auto;font-size:11px;opacity:.7}
+.railfoot{margin-top:auto;font-size:10px;color:#6E8A86;padding:12px 8px 4px;line-height:1.5}
+.pulse-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--signal);animation:pp 1.8s infinite}
+@keyframes pp{0%{box-shadow:0 0 0 0 #E8623D88}70%{box-shadow:0 0 0 7px #E8623D00}100%{box-shadow:0 0 0 0 #E8623D00}}
+
+.main{display:flex;flex-direction:column;min-width:0}
+.topbar{position:sticky;top:0;z-index:20;background:#EBF0EFdd;backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 26px;display:flex;align-items:center;gap:14px}
+.topbar h1{font-family:'Space Grotesk';font-size:17px;font-weight:600;margin:0}
+.topbar .sub{font-size:12px;color:var(--mist);margin-top:1px}
+.tbright{margin-left:auto;display:flex;align-items:center;gap:10px}
+.planbadge{font-size:11px;font-weight:600;font-family:'JetBrains Mono';background:var(--paper);border:1px solid var(--line);padding:6px 11px;border-radius:99px;display:flex;gap:7px;align-items:center}
+.content{padding:22px 26px 70px;max-width:1180px;width:100%}
+
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.eyebrow{font-family:'JetBrains Mono';font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--jade-deep);font-weight:500}
+.h2{font-family:'Space Grotesk';font-size:20px;font-weight:600;margin:3px 0 0}
+.muted{color:var(--mist)}
+.btn{background:var(--jade);color:#fff;font-weight:600;font-size:13.5px;padding:10px 16px;border-radius:10px;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+.btn:hover{background:var(--jade-deep)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}.btn.ghost:hover{background:var(--surface)}
+.btn.signal{background:var(--signal)}.btn.signal:hover{filter:brightness(.94)}
+.btn.dark{background:var(--ink)}.btn.sm{padding:6px 11px;font-size:12px;border-radius:8px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:4px 9px;border-radius:99px;background:var(--jade-soft);color:var(--jade-deep)}
+.chip.gray{background:var(--surface);color:var(--mist)}.chip.amber{background:#FBF1DC;color:#9A6B12}.chip.sig{background:var(--signal-soft);color:#B6411F}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--mist);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+select,input.txt,textarea.txt{width:100%;font-family:inherit;font-size:13.5px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);appearance:none}
+textarea.txt{resize:vertical;min-height:78px}
+select:focus,input:focus,textarea:focus{outline:2px solid var(--jade);outline-offset:-1px}
+.grid{display:grid;gap:16px}
+.stat{padding:16px 18px}.stat .n{font-family:'Space Grotesk';font-size:30px;font-weight:600;line-height:1}
+.stat .l{font-size:12px;color:var(--mist);margin-top:5px}.stat .d{font-size:11px;color:var(--ok);margin-top:6px;font-family:'JetBrains Mono'}
+hr.sep{border:none;border-top:1px solid var(--line);margin:18px 0}
+.row{display:flex;align-items:center;gap:8px}.spin{width:14px;height:14px;border:2px solid #ffffff60;border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:46px 20px;color:var(--mist)}
+.banner{border-radius:11px;padding:11px 14px;font-size:12px;display:flex;gap:9px;align-items:flex-start}
+.banner.warn{background:var(--signal-soft);border:1px solid #F3C7B8;color:#8E3A1E}
+.banner.info{background:var(--jade-soft);border:1px solid #B9DAD5;color:var(--jade-deep)}
+.banner.sec{background:#FBEDEA;border:1px solid #EBC4BB;color:#8E3A1E}
+
+/* sensitivity pills */
+.lv{font-family:'JetBrains Mono';font-size:9.5px;font-weight:500;padding:2px 6px;border-radius:5px;letter-spacing:.04em}
+.lv0{background:var(--surface);color:var(--mist)} .lv1{background:#E7F0FB;color:#2C5A99}
+.lv2{background:#FBF1DC;color:#9A6B12} .lv3{background:#FBE3DE;color:#A4321F}
+
+/* agents */
+.fleet{display:grid;grid-template-columns:repeat(auto-fill,minmax(166px,1fr));gap:11px}
+.agent{border:1px solid var(--line);border-radius:12px;padding:13px;background:var(--paper);position:relative;overflow:hidden}
+.agent .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.agent .nm{font-size:13px;font-weight:600}.agent .ro{font-size:10.5px;color:var(--mist);line-height:1.4}
+.agent.busy{border-color:var(--signal)}
+.agent.busy::after{content:'';position:absolute;left:0;bottom:0;height:3px;background:var(--signal);width:40%;animation:scan 1.1s infinite ease-in-out}
+@keyframes scan{0%{left:-40%}100%{left:100%}}
+.status{font-family:'JetBrains Mono';font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:3px 7px;border-radius:6px;background:var(--surface);color:var(--mist)}
+.status.busy{background:var(--signal-soft);color:#B6411F}
+.aorb{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;color:#fff;font-size:13px;flex:none}
+.log{font-family:'JetBrains Mono';font-size:11.5px;background:var(--ink);color:#BFE0DA;border-radius:12px;padding:14px 16px;height:230px;overflow:auto;line-height:1.7}
+.log .ln{display:flex;gap:9px;opacity:0;animation:fadein .3s forwards}@keyframes fadein{to{opacity:1}}
+.log .t{color:#5C7E79;flex:none}.log .tag{color:var(--signal);flex:none}.log .tag.ok{color:#54C39B}.log .tag.jade{color:#4FBFB2}
+
+/* catalogue / provider */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}.toolbar .field{flex:1;min-width:140px}
+.provider{padding:16px 18px;display:flex;gap:16px;align-items:flex-start}.provider:hover{border-color:var(--jade)}
+.pv-flag{width:42px;height:42px;border-radius:11px;background:var(--jade-soft);display:grid;place-items:center;font-size:20px;flex:none}
+.pv-main{flex:1;min-width:0}.pv-name{font-family:'Space Grotesk';font-size:16px;font-weight:600;margin:0}
+.pv-loc{font-size:12.5px;color:var(--mist);margin-top:1px}.pv-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.pv-rating{text-align:right;flex:none}.pv-rating .num{font-family:'Space Grotesk';font-size:22px;font-weight:600}
+.pv-rating .stars{color:var(--amber);font-size:12px;letter-spacing:1px}.pv-rating .src{font-size:10px;color:var(--mist);font-family:'JetBrains Mono';margin-top:2px}
+
+/* table */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--mist);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line)}
+.tbl td{padding:11px 12px;border-bottom:1px solid var(--line)}
+.tbl tr:last-child td{border-bottom:none}.tbl tr:hover td{background:var(--surface)}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:#0e2a2c66;z-index:40;animation:fadein .2s}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:min(560px,94vw);background:var(--surface);z-index:50;box-shadow:-12px 0 40px rgba(16,42,44,.2);overflow:auto;animation:slidein .25s ease}
+@keyframes slidein{from{transform:translateX(40px);opacity:.5}to{transform:none;opacity:1}}
+.dwrap{padding:22px}.dhead{display:flex;align-items:flex-start;gap:14px}
+.barrow{display:flex;align-items:center;gap:10px;margin:7px 0}.barrow .k{width:120px;font-size:11.5px;color:var(--mist);flex:none}
+.bar{flex:1;height:7px;background:var(--surface);border:1px solid var(--line);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--jade)}
+.barrow .v{width:34px;text-align:right;font-family:'JetBrains Mono';font-size:11.5px}
+.srclink{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);font-size:12.5px;margin-bottom:7px}
+.srclink a{color:var(--jade-deep);text-decoration:none;font-weight:600;font-size:12px}
+
+/* vault field */
+.kv{display:flex;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:var(--paper);margin-bottom:8px}
+.kv .k{width:120px;font-size:11.5px;color:var(--mist);flex:none}.kv .v{flex:1;font-family:'JetBrains Mono';font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.kv .reveal{font-size:11px;color:var(--jade-deep);font-weight:600;flex:none}
+
+/* journey */
+.ck{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);margin-bottom:7px;font-size:13px}
+.ck .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--jade);display:grid;place-items:center;color:#fff;flex:none}
+
+/* plans */
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.plan{border:1.5px solid var(--line);border-radius:16px;padding:20px;background:var(--paper);display:flex;flex-direction:column}
+.plan.cur{border-color:var(--jade);box-shadow:0 0 0 3px var(--jade-soft)}
+.plan .pn{font-family:'Space Grotesk';font-size:18px;font-weight:600}
+.plan .pp{font-family:'Space Grotesk';font-size:28px;font-weight:600;margin:6px 0 2px}.plan .pp small{font-size:13px;color:var(--mist);font-weight:400}
+.plan ul{list-style:none;padding:0;margin:12px 0;flex:1}.plan li{font-size:12.5px;padding:5px 0 5px 22px;position:relative;color:var(--ink2)}
+.plan li::before{content:'✓';position:absolute;left:0;color:var(--jade);font-weight:700}
+
+/* gate */
+.gate{text-align:center;padding:42px 24px;border:1.5px dashed var(--line);border-radius:16px;background:var(--paper)}
+.gate .lock{width:48px;height:48px;border-radius:14px;background:var(--jade-soft);display:grid;place-items:center;margin:0 auto 14px;font-size:22px}
+
+/* landing */
+.land{min-height:100vh;background:radial-gradient(120% 120% at 80% -10%,#16403E 0%,#102A2C 55%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;color:#DCEEEB}
+.land .hero{max-width:760px;text-align:center}
+.land .glyph{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,var(--jade),var(--signal));display:inline-grid;place-items:center;color:#fff;font-weight:700;font-size:22px;margin-bottom:18px}
+.land h1{font-family:'Space Grotesk';font-size:40px;font-weight:600;color:#fff;margin:0;line-height:1.08}
+.land h1 .a{color:var(--signal)}
+.land p.lede{font-size:15px;color:#A9C9C4;margin:14px auto 0;max-width:540px}
+.rolecards{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:680px;width:100%;margin:32px auto 0}
+.rolecard{background:#ffffff0a;border:1px solid #ffffff22;border-radius:16px;padding:24px;text-align:left;transition:.18s;color:#DCEEEB}
+.rolecard:hover{background:#ffffff14;border-color:var(--jade);transform:translateY(-2px)}
+.rolecard .ri{width:38px;height:38px;border-radius:11px;background:var(--jade);display:grid;place-items:center;color:#fff;margin-bottom:12px}
+.rolecard b{font-family:'Space Grotesk';font-size:18px;color:#fff;display:block}
+.rolecard span{font-size:12.5px;color:#9FC0BB;display:block;margin-top:4px}
+.land .foot{font-size:11px;color:#6E8A86;margin-top:30px;max-width:560px;text-align:center;line-height:1.6}
+@media (max-width:680px){.rolecards{grid-template-columns:1fr}.land h1{font-size:30px}}
+
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr}
+  .rail{position:fixed;bottom:0;top:auto;height:auto;width:100%;flex-direction:row;z-index:60;padding:6px;overflow-x:auto;gap:2px}
+  .brand,.railfoot,.roleswitch,.nav .grp{display:none}
+  .nav{flex-direction:row;width:100%;gap:2px}.nav button{flex-direction:column;gap:3px;font-size:9.5px;padding:6px 8px;white-space:nowrap}.nav .lk{display:none}
+  .content{padding:16px 14px 92px}.topbar{padding:11px 15px}
+}
+`;
+
+const I={
+  grid:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
+  book:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h7M8 11h7"/></svg>,
+  plane:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.5 13.5 21 3M21 3l-6.5 18-4-8.5L2 8.5z"/></svg>,
+  bot:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="8" width="16" height="11" rx="2.5"/><path d="M12 8V4M9 13h.01M15 13h.01"/></svg>,
+  shield:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>,
+  heart:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg>,
+  card:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18"/></svg>,
+  users:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M16 11a3 3 0 0 0 0-6"/></svg>,
+  file:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h6"/></svg>,
+  msg:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 5h16v11H9l-5 4z"/></svg>,
+  plug:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5"/></svg>,
+  list:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>,
+  search:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>,
+  lock:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>,
+  check:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12l5 5L20 7"/></svg>,
+  x:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M18 6 6 18"/></svg>,
+};
+
+/* ---------- domain data ---------- */
+const TREATMENTS=["Cardiac / Heart bypass","Knee & Hip replacement","Spine surgery","Dental implants & full-mouth","Cosmetic & plastic surgery","Hair transplant","Bariatric / weight-loss","Fertility / IVF","Oncology / cancer care","Ophthalmology / LASIK","Organ transplant","Neurosurgery"];
+const DESTINATIONS=[{c:"India",f:"🇮🇳",hub:"DEL / BOM / MAA"},{c:"Thailand",f:"🇹🇭",hub:"BKK"},{c:"Singapore",f:"🇸🇬",hub:"SIN"},{c:"Turkey",f:"🇹🇷",hub:"IST"},{c:"Mexico",f:"🇲🇽",hub:"CUN / MEX"},{c:"South Korea",f:"🇰🇷",hub:"ICN"},{c:"Malaysia",f:"🇲🇾",hub:"KUL"},{c:"UAE",f:"🇦🇪",hub:"AUH / DXB"},{c:"Costa Rica",f:"🇨🇷",hub:"SJO"},{c:"Spain",f:"🇪🇸",hub:"MAD / BCN"}];
+const ORIGINS=["Australia","United States","United Kingdom","Canada","New Zealand","Germany","UAE","Singapore"];
+const flagFor=c=>(DESTINATIONS.find(d=>d.c===c)||{}).f||"🌐";
+const hubFor=c=>(DESTINATIONS.find(d=>d.c===c)||{}).hub||"—";
+let UID=100;const uid=p=>`${p}-${++UID}`;
+
+const PLANS=[
+  {id:"explorer",name:"Explorer",price:"Free",tagline:"Browse & plan",feat:["Full provider catalogue","Basic journey planner","Community ratings"]},
+  {id:"care",name:"Care",price:"A$39",per:"/mo",tagline:"For active patients",feat:["Everything in Explorer","Live AI agents + auto-explore","Secure records vault","Web-verified providers","1 active journey"]},
+  {id:"concierge",name:"Concierge",price:"A$149",per:"/mo",tagline:"End-to-end, white-glove",feat:["Everything in Care","Regional donor registry access","Unlimited journeys","Priority agent fleet","Dedicated coordinator"]},
+];
+const ENTITLE={vault:["care","concierge"],donor:["concierge"],agents:["care","concierge"],journeys:["concierge"]};
+const can=(plan,key)=>ENTITLE[key].includes(plan);
+
+const SEED=[
+  {id:uid("PV"),name:"Apollo Hospitals",city:"Chennai",country:"India",treatments:["Cardiac / Heart bypass","Oncology / cancer care","Knee & Hip replacement"],rating:4.7,accred:["JCI","NABH"],cost:"$7k–$12k",lead:"Cardiac team (verify)",sources:{Google:4.6,Practo:4.7,JCI:5.0,Trustpilot:4.4},refs:["JCI accreditation directory","Practo profile","Google reviews"],verified:true},
+  {id:uid("PV"),name:"Bumrungrad International",city:"Bangkok",country:"Thailand",treatments:["Cardiac / Heart bypass","Bariatric / weight-loss","Oncology / cancer care"],rating:4.8,accred:["JCI"],cost:"$9k–$16k",lead:"Int'l patient centre",sources:{Google:4.7,Trustpilot:4.6,JCI:5.0},refs:["JCI directory","Google reviews"],verified:true},
+  {id:uid("PV"),name:"Acıbadem Healthcare",city:"Istanbul",country:"Turkey",treatments:["Hair transplant","Oncology / cancer care","Cardiac / Heart bypass"],rating:4.6,accred:["JCI"],cost:"$3k–$9k",lead:"Acıbadem int'l desk",sources:{Google:4.5,Trustpilot:4.4,JCI:5.0},refs:["JCI directory","Trustpilot"],verified:true},
+  {id:uid("PV"),name:"Mount Elizabeth Hospital",city:"Singapore",country:"Singapore",treatments:["Neurosurgery","Oncology / cancer care","Organ transplant"],rating:4.7,accred:["JCI"],cost:"$20k–$45k",lead:"Parkway int'l patients",sources:{Google:4.5,JCI:5.0,Trustpilot:4.5},refs:["JCI directory"],verified:true},
+  {id:uid("PV"),name:"Prince Court Medical",city:"Kuala Lumpur",country:"Malaysia",treatments:["Fertility / IVF","Cardiac / Heart bypass","Knee & Hip replacement"],rating:4.6,accred:["JCI","MSQH"],cost:"$5k–$12k",lead:"Malaysia Healthcare desk",sources:{Google:4.5,Trustpilot:4.4,JCI:5.0},refs:["MHTC directory"],verified:true},
+  {id:uid("PV"),name:"Cleveland Clinic Abu Dhabi",city:"Abu Dhabi",country:"UAE",treatments:["Cardiac / Heart bypass","Neurosurgery","Organ transplant"],rating:4.7,accred:["JCI"],cost:"$25k–$55k",lead:"CCAD int'l patients",sources:{Google:4.5,JCI:5.0,Trustpilot:4.4},refs:["JCI directory"],verified:true},
+];
+
+const LV=[["P0","Public",0],["P1","Internal",1],["P2","Confidential",2],["P3","Restricted PHI",3]];
+const seedPatients=()=>([
+  {id:uid("SUB"),name:"Demo Subscriber (you)",region:"Australia",plan:"concierge",mrn:"MRN-AU-4471",status:"Active",
+   fields:[{k:"Full name",v:"Demo Subscriber",lv:2},{k:"Date of birth",v:"1986-04-12",lv:3},{k:"Passport / ID",v:"PA1234567",lv:3},{k:"Blood type",v:"O+",lv:2},{k:"Diagnosis",v:"Bilateral knee osteoarthritis",lv:3},{k:"Allergies",v:"Penicillin",lv:2},{k:"Insurance no.",v:"INS-99-22841",lv:3},{k:"Care notes",v:"Seeking knee replacement abroad",lv:1}],
+   consents:[{to:"Apollo Hospitals",scope:"Diagnosis + imaging",on:true},{to:"Travel insurer",scope:"Coverage verification",on:false}]},
+  {id:uid("SUB"),name:"A. Rivera",region:"United States",plan:"care",mrn:"MRN-US-1183",status:"Active",
+   fields:[{k:"Full name",v:"A. Rivera",lv:2},{k:"Date of birth",v:"1971-09-03",lv:3},{k:"Blood type",v:"A−",lv:2},{k:"Diagnosis",v:"CAD — bypass candidate",lv:3},{k:"Insurance no.",v:"INS-US-55120",lv:3}],consents:[]},
+  {id:uid("SUB"),name:"K. Mensah",region:"UAE",plan:"explorer",mrn:"MRN-AE-7782",status:"Trial",
+   fields:[{k:"Full name",v:"K. Mensah",lv:2},{k:"Date of birth",v:"1990-12-21",lv:3},{k:"Diagnosis",v:"Fertility consult",lv:3}],consents:[]},
+]);
+const seedDonors=()=>([
+  {id:"DNR-7781",region:"NSW, Australia",blood:"O+",intent:"Kidney — living, directed",consent:"Registered",authority:"OrganMatch (AU)"},
+  {id:"DNR-6620",region:"Victoria, Australia",blood:"A+",intent:"Bone marrow / stem cells",consent:"Verified",authority:"ABMDR"},
+  {id:"DNR-5519",region:"Tamil Nadu, India",blood:"B+",intent:"Liver — living, related",consent:"Pending review",authority:"NOTTO (IN)"},
+]);
+const seedComplaints=()=>([
+  {id:uid("C"),patient:"A. Rivera",category:"Data access",severity:"Medium",status:"In review",text:"Requesting copy of records shared with provider.",when:"2026-06-10"},
+]);
+
+/* ---------- AI agent layer ---------- */
+async function callClaude(prompt,useWeb=false){
+  const body={model:"claude-sonnet-4-6",max_tokens:1000,messages:[{role:"user",content:prompt}]};
+  if(useWeb)body.tools=[{type:"web_search_20250305",name:"web_search"}];
+  const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error("api "+r.status);
+  const d=await r.json();
+  return (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+}
+function extractJSON(text){
+  if(!text)return null;let t=text.replace(/```json/gi,"").replace(/```/g,"").trim();
+  const open=t.search(/[\[{]/);if(open<0)return null;
+  const oc=t[open],cc=oc==="["?"]":"}";let depth=0,end=-1,inStr=false,esc=false;
+  for(let i=open;i<t.length;i++){const ch=t[i];
+    if(inStr){if(esc)esc=false;else if(ch==="\\")esc=true;else if(ch==='"')inStr=false;continue;}
+    if(ch==='"')inStr=true;else if(ch===oc)depth++;else if(ch===cc){depth--;if(depth===0){end=i;break;}}}
+  if(end<0)return null;try{return JSON.parse(t.slice(open,end+1));}catch{return null;}
+}
+function fallbackPlan(origin,p){return{
+  flights:{route:`${origin} → ${p.city} (${hubFor(p.country)})`,hub:hubFor(p.country),typicalHours:"varies",note:"Book a flexible-return fare; recovery dates can shift."},
+  visa:{type:"Tourist / medical visa (verify per nationality)",medicalVisa:`${p.country} commonly offers a medical visa with a hospital invitation letter.`,docs:["Passport (6+ months validity)","Hospital invitation letter","Proof of funds","Return ticket"]},
+  permissions:["Fit-to-fly clearance from treating doctor before return","Post-surgery flying often restricted 1–2 weeks","Carry a medication letter for customs"],
+  stay:{totalDays:"10–21 days",hospitalDays:"2–7 days",recovery:"Plan local recovery before flying"},
+  contacts:[{role:"International patient office",detail:`${p.name} — request a coordinator`},{role:"Your embassy/consulate",detail:`${origin} mission in ${p.country}`},{role:"Travel insurer",detail:"Confirm medical-tourism coverage"}],
+  checklist:["Get written, itemised quote","Request surgeon credentials & case volume","Confirm accreditation","Arrange interpreter if needed","Book recovery stay near hospital","Confirm aftercare & home follow-up"]};}
+
+const mask=(v)=>{const s=String(v);return s.length<=4?"••••":"•".repeat(Math.max(4,s.length-2))+s.slice(-2);};
+
+/* ============================================================ */
+function App(){
+  const [authed,setAuthed]=useState(false);
+  const [role,setRole]=useState("patient");
+  const [plan,setPlan]=useState("concierge");
+  const [view,setView]=useState("overview");
+
+  const [providers,setProviders]=useState(SEED);
+  const [patients,setPatients]=useState(seedPatients);
+  const [donors,setDonors]=useState(seedDonors);
+  const [complaints,setComplaints]=useState(seedComplaints);
+  const [audit,setAudit]=useState([{actor:"system",action:"seed loaded",target:"catalogue",lv:0,t:"startup"}]);
+  const [conns,setConns]=useState({agents:true,fhir:false,stripe:false,transplant:false,sso:false});
+
+  const [log,setLog]=useState([]);
+  const [agents,setAgents]=useState({discover:0,rate:0,cost:0,travel:0,visa:0,concierge:0});
+  const [running,setRunning]=useState(false);
+  const [auto,setAuto]=useState(false);
+  const [apiOff,setApiOff]=useState(false);
+  const [selected,setSelected]=useState(null);
+  const [treat,setTreat]=useState(TREATMENTS[0]);
+  const [region,setRegion]=useState("Any country");
+  const [fTreat,setFTreat]=useState("All");const [fCountry,setFCountry]=useState("All");const [q,setQ]=useState("");
+  const [origin,setOrigin]=useState("Australia");const [jProvider,setJProvider]=useState(null);const [jPlan,setJPlan]=useState(null);const [jBusy,setJBusy]=useState(false);
+
+  const logRef=useRef(null);const autoRef=useRef(false);
+  const me=patients[0];
+
+  const pushLog=useCallback((tag,msg,kind="")=>setLog(l=>[...l.slice(-80),{tag,msg,kind,t:new Date().toLocaleTimeString([],{hour12:false})}]),[]);
+  const logAudit=useCallback((action,target,lv=2,actor)=>setAudit(a=>[{actor:actor||(role==="admin"?"admin@medivoyage":"patient:me"),action,target,lv,t:new Date().toLocaleTimeString([],{hour12:false})},...a].slice(0,200)),[role]);
+  useEffect(()=>{if(logRef.current)logRef.current.scrollTop=logRef.current.scrollHeight;},[log]);
+  const setAgent=(k,v)=>setAgents(a=>({...a,[k]:v}));const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+  const enter=(r,p)=>{setRole(r);setPlan(p||(r==="admin"?"concierge":"explorer"));setView(r==="admin"?"dashboard":"overview");setAuthed(true);logAudit("signed in",r+" interface",1,r==="admin"?"admin@medivoyage":"patient:me");};
+  const switchRole=(r)=>{setRole(r);setView(r==="admin"?"dashboard":"overview");logAudit("switched interface",r,1);};
+
+  /* discovery */
+  const deploy=useCallback(async()=>{
+    if(running)return;setRunning(true);
+    const where=region==="Any country"?"the best-value medical-tourism destinations worldwide":region;
+    pushLog("DISPATCH",`Deploying fleet · "${treat}" · ${region}`,"jade");setAgent("discover",1);await sleep(200);
+    pushLog("DISCOVER",`Scanning providers in ${region}…`);setAgent("rate",1);
+    const prompt=`You are the discovery+ratings agent for a medical-tourism catalogue. For "${treat}" in ${where}, return 4 real reputable hospitals/clinics. ONLY a JSON array, no prose. Each: {"name":string,"city":string,"country":string,"treatments":[string],"rating":number(3.8-4.9),"accred":[string],"cost":string,"lead":string,"sources":{"Google":number,"Trustpilot":number,"JCI":number},"refs":[string]}. Conservative, factual research leads.`;
+    let added=0;
+    try{
+      const arr=extractJSON(await callClaude(prompt,false));
+      if(Array.isArray(arr)){
+        const mapped=arr.filter(x=>x&&x.name).map(x=>({id:uid("PV"),name:x.name,city:x.city||"—",country:x.country||region,treatments:x.treatments?.length?x.treatments:[treat],rating:Math.min(5,Math.max(3,+x.rating||4.3)),accred:x.accred||[],cost:x.cost||"—",lead:x.lead||"Int'l patient office",sources:x.sources||{},refs:x.refs||[],verified:false}));
+        setProviders(p=>{const n=new Set(p.map(v=>v.name.toLowerCase()));const f=mapped.filter(m=>!n.has(m.name.toLowerCase()));added=f.length;return[...f,...p];});
+      }else throw new Error();
+    }catch{setApiOff(true);pushLog("OFFLINE","Live API unreachable — using seed catalogue (agents run in the Claude preview).","");}
+    setAgent("discover",0);
+    if(added>0){pushLog("RATINGS","Aggregated Google · Trustpilot · accreditation","ok");await sleep(250);pushLog("CATALOGUE",`+${added} indexed · catalogue updated`,"ok");logAudit("catalogue updated",`+${added} providers`,1,"agent:scout");}
+    else if(!apiOff)pushLog("CATALOGUE","No new providers for this query","");
+    setAgent("rate",0);setRunning(false);
+  },[running,treat,region,pushLog,apiOff,logAudit]);
+
+  useEffect(()=>{autoRef.current=auto;},[auto]);
+  useEffect(()=>{if(!auto)return;let stop=false;(async()=>{pushLog("AUTO","Continuous exploration engaged","jade");let i=0;
+    while(!stop&&autoRef.current){const t=TREATMENTS[i%TREATMENTS.length];const d=DESTINATIONS[(i*3)%DESTINATIONS.length].c;setTreat(t);setRegion(d);await deploy();if(apiOff){setAuto(false);break;}i++;for(let s=0;s<12&&autoRef.current&&!stop;s++)await sleep(1000);}})();
+    return()=>{stop=true;};},[auto]);// eslint-disable-line
+
+  const verifyProvider=useCallback(async(p)=>{
+    setAgent("rate",1);pushLog("VERIFY",`Live web check · ${p.name}`,"jade");
+    const prompt=`Use web search to verify hospital "${p.name}", ${p.city}, ${p.country} for medical tourism. ONLY JSON: {"rating":number,"accred":[string],"sources":{"Google":number,"Trustpilot":number,"JCI":number},"refs":[{"label":string,"url":string}],"note":string}`;
+    try{const j=extractJSON(await callClaude(prompt,true));
+      if(j){setProviders(l=>l.map(x=>x.id===p.id?{...x,rating:j.rating||x.rating,accred:j.accred||x.accred,sources:j.sources||x.sources,weblinks:j.refs||x.weblinks,note:j.note,verified:true}:x));
+        setSelected(s=>s&&s.id===p.id?{...s,verified:true,note:j.note,weblinks:j.refs,rating:j.rating||s.rating,sources:j.sources||s.sources}:s);
+        pushLog("VERIFY",`${p.name} verified`,"ok");}else throw new Error();
+    }catch{setApiOff(true);pushLog("OFFLINE","Verification needs the Claude preview.","");}
+    setAgent("rate",0);
+  },[pushLog]);
+
+  const planJourney=useCallback(async(p)=>{
+    if(!p)return;setJBusy(true);setJPlan(null);setAgent("travel",1);setAgent("visa",1);setAgent("concierge",1);
+    pushLog("TRAVEL",`Routing ${origin} → ${p.city} (${hubFor(p.country)})`,"jade");
+    const prompt=`Plan medical-travel logistics: patient from ${origin} to ${p.city}, ${p.country} for "${p.treatments[0]}" at ${p.name}. ONLY JSON:{"flights":{"route":string,"hub":string,"typicalHours":string,"note":string},"visa":{"type":string,"medicalVisa":string,"docs":[string]},"permissions":[string],"stay":{"totalDays":string,"hospitalDays":string,"recovery":string},"contacts":[{"role":string,"detail":string}],"checklist":[string]}`;
+    try{const j=extractJSON(await callClaude(prompt,false));if(j)setJPlan(j);else throw new Error();
+      pushLog("VISA","Visa & fit-to-fly compiled","ok");pushLog("CONCIERGE","Contacts & aftercare assembled","ok");}
+    catch{setApiOff(true);setJPlan(fallbackPlan(origin,p));pushLog("OFFLINE","Live planner unreachable — template itinerary.","");}
+    setAgent("travel",0);setAgent("visa",0);setAgent("concierge",0);setJBusy(false);
+  },[origin,pushLog]);
+
+  const filtered=providers.filter(p=>{if(fTreat!=="All"&&!p.treatments.includes(fTreat))return false;if(fCountry!=="All"&&p.country!==fCountry)return false;if(q&&!`${p.name} ${p.city} ${p.country}`.toLowerCase().includes(q.toLowerCase()))return false;return true;});
+  const countries=[...new Set(providers.map(p=>p.country))];
+  const avgRating=(providers.reduce((s,p)=>s+p.rating,0)/Math.max(1,providers.length)).toFixed(2);
+  const busyCount=Object.values(agents).filter(Boolean).length;
+  const sendToJourney=p=>{setJProvider(p);setJPlan(null);setSelected(null);setView(role==="admin"?"providers":"journey");if(role!=="admin")setView("journey");};
+
+  if(!authed)return <Landing onEnter={enter}/>;
+
+  const PNAV=[["overview","Overview",I.grid],["catalogue","Find care",I.book],["journey","Journey planner",I.plane],["vault","My records",I.shield,!can(plan,"vault")],["donor","Donor registry",I.heart,!can(plan,"donor")],["subscription","Subscription",I.card]];
+  const ANAV=[["dashboard","Dashboard",I.grid],["subscribers","Subscribers",I.users],["providers","Catalogue",I.book],["donors","Donor registry",I.heart],["records","Patient records",I.shield],["complaints","Complaints",I.msg],["compliance","Compliance",I.lock],["connections","API connections",I.plug],["audit","Audit log",I.list]];
+  const nav=role==="admin"?ANAV:PNAV;
+  const titles={overview:"Welcome back",catalogue:"Find care",journey:"Journey planner",vault:"My secure records",donor:"Donor registry",subscription:"Subscription",dashboard:"Admin dashboard",subscribers:"Subscribers",providers:"Provider catalogue",donors:"Donor registry",records:"Patient records",complaints:"Complaints & grievances",compliance:"Compliance center",connections:"API connections",audit:"Audit log"};
+
+  const ctlProps={treat,setTreat,region,setRegion,deploy,running,auto,setAuto,providers,countries,avgRating,agents,log,logRef,apiOff};
+
+  return (<div className="mv"><style>{CSS}</style>
+    <div className="shell">
+      <aside className="rail">
+        <div className="brand"><div className="glyph">M</div><div><b>MediVoyage</b><small>Care · Without Borders</small></div></div>
+        <div className="roleswitch">
+          <button className={role==="patient"?"on":""} onClick={()=>switchRole("patient")}>Patient</button>
+          <button className={role==="admin"?"on":""} onClick={()=>switchRole("admin")}>Admin</button>
+        </div>
+        <nav className="nav">
+          <div className="grp">{role==="admin"?"Operations":"Your care"}</div>
+          {nav.map(([k,l,ic,locked])=>(
+            <button key={k} className={view===k?"on":""} onClick={()=>setView(k)}>
+              <span className="ic">{ic}</span><span className="lbl">{l}</span>{locked&&<span className="lk">{I.lock}</span>}
+            </button>))}
+        </nav>
+        <div className="railfoot"><div className="row" style={{marginBottom:6}}><span className="pulse-dot"></span>{busyCount?`${busyCount} agents active`:"Fleet idle"}</div>
+          Prototype — demonstrates security & compliance controls. Don't enter real patient data.</div>
+      </aside>
+
+      <main className="main">
+        <div className="topbar">
+          <div><h1>{titles[view]}</h1><div className="sub">{providers.length} providers · {patients.length} subscribers · {countries.length} countries</div></div>
+          <div className="tbright">
+            <span className="planbadge"><span className="pulse-dot"></span>{auto?"AUTO-EXPLORE":apiOff?"SEED MODE":"LIVE"}</span>
+            <span className="planbadge">{I.card}{PLANS.find(p=>p.id===plan).name}</span>
+            <button className="btn ghost sm" onClick={()=>{setAuthed(false);logAudit("signed out","session",1);}}>Sign out</button>
+          </div>
+        </div>
+        <div className="content">
+          {role==="patient"&&view==="overview"&&<PatientHome {...{me,plan,setView,providers,avgRating}}/>}
+          {role==="patient"&&view==="catalogue"&&<><Catalogue {...{filtered,fTreat,setFTreat,fCountry,setFCountry,q,setQ,countries,openProvider:setSelected}}/></>}
+          {role==="patient"&&view==="journey"&&<Journey {...{providers,jProvider,setJProvider,origin,setOrigin,planJourney,jPlan,jBusy}}/>}
+          {role==="patient"&&view==="vault"&&(can(plan,"vault")?<Vault me={me} setPatients={setPatients} logAudit={logAudit}/>:<Gate feature="Secure records vault" need="Care" onUp={()=>setView("subscription")}/>)}
+          {role==="patient"&&view==="donor"&&(can(plan,"donor")?<DonorRegistry donors={donors} setDonors={setDonors} role="patient" logAudit={logAudit}/>:<Gate feature="Regional donor registry" need="Concierge" onUp={()=>setView("subscription")}/>)}
+          {role==="patient"&&view==="subscription"&&<Subscription plan={plan} setPlan={setPlan} logAudit={logAudit}/>}
+
+          {role==="admin"&&view==="dashboard"&&<AdminDash {...ctlProps} patients={patients} complaints={complaints} audit={audit} setView={setView}/>}
+          {role==="admin"&&view==="subscribers"&&<Subscribers patients={patients}/>}
+          {role==="admin"&&view==="providers"&&<><Control {...ctlProps}/><div style={{height:16}}/><Catalogue {...{filtered,fTreat,setFTreat,fCountry,setFCountry,q,setQ,countries,openProvider:setSelected}}/></>}
+          {role==="admin"&&view==="donors"&&<DonorRegistry donors={donors} setDonors={setDonors} role="admin" logAudit={logAudit}/>}
+          {role==="admin"&&view==="records"&&<AdminRecords patients={patients} logAudit={logAudit}/>}
+          {role==="admin"&&view==="complaints"&&<Complaints complaints={complaints} setComplaints={setComplaints} logAudit={logAudit}/>}
+          {role==="admin"&&view==="compliance"&&<Compliance conns={conns} audit={audit}/>}
+          {role==="admin"&&view==="connections"&&<Connections conns={conns} setConns={setConns} logAudit={logAudit}/>}
+          {role==="admin"&&view==="audit"&&<AuditLog audit={audit}/>}
+        </div>
+      </main>
+    </div>
+    {selected&&<ProviderDrawer p={selected} onClose={()=>setSelected(null)} onVerify={verifyProvider} onJourney={sendToJourney}/>}
+  </div>);
+}
+
+/* ---------------- Landing ---------------- */
+function Landing({onEnter}){
+  return (<div className="mv"><style>{CSS}</style><div className="land">
+    <div className="hero">
+      <div className="glyph">M</div>
+      <h1>Medical care,<br/>without <span className="a">borders.</span></h1>
+      <p className="lede">AI agents continuously explore hospitals, surgeons and clinics worldwide — then plan your flights, visas and aftercare. Choose how you'd like to enter.</p>
+    </div>
+    <div className="rolecards">
+      <button className="rolecard" onClick={()=>onEnter("patient","explorer")}>
+        <div className="ri">{I.heart}</div><b>I'm a patient</b><span>Browse care, build a journey, and securely hold your records. Start free on Explorer.</span>
+      </button>
+      <button className="rolecard" onClick={()=>onEnter("admin","concierge")}>
+        <div className="ri" style={{background:"var(--signal)"}}>{I.shield}</div><b>I'm an operator</b><span>Manage the catalogue, subscribers, donor registry, compliance and connectors.</span>
+      </button>
+    </div>
+    <div className="foot">Prototype for demonstration. It models HIPAA / Privacy-Act controls (role-based access, audit logging, data classification, consent) but is not certified and must not hold real patient data. Organ allocation is handled only by accredited national authorities.</div>
+  </div></div>);
+}
+
+/* ---------------- Patient home ---------------- */
+function PatientHome({me,plan,setView,providers,avgRating}){
+  return (<div className="grid" style={{gridTemplateColumns:"1fr"}}>
+    <div className="card" style={{padding:20}}>
+      <div className="eyebrow">Hello{me?`, ${me.name.split(" (")[0]}`:""}</div>
+      <div className="h2" style={{marginBottom:6}}>Let's plan your care</div>
+      <p className="muted" style={{fontSize:13.5,maxWidth:560}}>Search vetted providers, let the agent fleet build your journey, and keep your documents in an access-controlled vault.</p>
+      <div className="row" style={{gap:10,marginTop:14,flexWrap:"wrap"}}>
+        <button className="btn" onClick={()=>setView("catalogue")}>{I.search}Find care</button>
+        <button className="btn ghost" onClick={()=>setView("journey")}>Plan a journey</button>
+        <button className="btn ghost" onClick={()=>setView("vault")}>{I.lock}My records</button>
+      </div>
+    </div>
+    <div className="grid" style={{gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))"}}>
+      <div className="card stat"><div className="n">{providers.length}</div><div className="l">Providers you can explore</div></div>
+      <div className="card stat"><div className="n">{avgRating}<span style={{fontSize:14,color:"var(--amber)"}}> ★</span></div><div className="l">Avg. aggregated rating</div></div>
+      <div className="card stat"><div className="n">{PLANS.find(p=>p.id===plan).name}</div><div className="l">Your plan</div><div className="d" style={{color:"var(--mist)"}}>manage in Subscription</div></div>
+    </div>
+  </div>);
+}
+
+/* ---------------- Admin dashboard ---------------- */
+function AdminDash(props){
+  const {providers,countries,avgRating,patients,complaints,audit,agents,log,logRef,setView}=props;
+  const active=patients.filter(p=>p.status==="Active").length;
+  return (<div className="grid" style={{gridTemplateColumns:"1fr"}}>
+    {props.apiOff&&<div className="banner warn">⚠️ <span>Live agents run inside the Claude preview (Anthropic API). You're on the seed catalogue. On your own domain, connect a backend in API connections.</span></div>}
+    <Control {...props}/>
+    <div className="grid" style={{gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))"}}>
+      <div className="card stat"><div className="n">{patients.length}</div><div className="l">Subscribers</div><div className="d">{active} active</div></div>
+      <div className="card stat"><div className="n">{providers.length}</div><div className="l">Providers</div><div className="d">{countries.length} countries</div></div>
+      <div className="card stat"><div className="n">{complaints.filter(c=>c.status!=="Resolved").length}</div><div className="l">Open complaints</div></div>
+      <div className="card stat"><div className="n">{avgRating}<span style={{fontSize:14,color:"var(--amber)"}}> ★</span></div><div className="l">Catalogue rating</div></div>
+    </div>
+    <div className="grid" style={{gridTemplateColumns:"1.3fr 1fr",alignItems:"start"}}>
+      <div className="card" style={{padding:18}}>
+        <div className="row" style={{justifyContent:"space-between",marginBottom:12}}><div><div className="eyebrow">Fleet</div><div className="h2" style={{fontSize:16}}>Specialist agents</div></div></div>
+        <AgentGrid agents={agents}/>
+      </div>
+      <div><div className="eyebrow" style={{marginBottom:8,display:"block"}}>Live telemetry</div><TelemetryLog log={log} logRef={logRef}/></div>
+    </div>
+  </div>);
+}
+
+/* ---------------- Control console ---------------- */
+function Control({treat,setTreat,region,setRegion,deploy,running,auto,setAuto}){
+  return (<div className="card" style={{padding:18}}>
+    <div className="eyebrow">Dispatch</div><div className="h2" style={{marginBottom:14}}>Send the agent fleet exploring</div>
+    <div className="toolbar">
+      <div className="field"><label>Treatment</label><select value={treat} onChange={e=>setTreat(e.target.value)}>{TREATMENTS.map(t=><option key={t}>{t}</option>)}</select></div>
+      <div className="field"><label>Country / region</label><select value={region} onChange={e=>setRegion(e.target.value)}><option>Any country</option>{DESTINATIONS.map(d=><option key={d.c}>{d.c}</option>)}</select></div>
+      <button className="btn" disabled={running} onClick={()=>deploy()} style={{height:40}}>{running?<><span className="spin"></span>Exploring…</>:"Deploy agents"}</button>
+      <button className={"btn "+(auto?"signal":"ghost")} onClick={()=>setAuto(a=>!a)} style={{height:40}}>{auto?"Stop auto-explore":"Auto-explore"}</button>
+    </div>
+    <div className="muted" style={{fontSize:11.5,marginTop:10}}>Auto-explore rotates treatments & regions, indexing providers and refreshing ratings while open.</div>
+  </div>);
+}
+const AGENT_META=[{k:"discover",nm:"Scout",ro:"Finds hospitals & surgeons",c:"#0E8F84",g:"⌖"},{k:"rate",nm:"Appraiser",ro:"Aggregates ratings & refs",c:"#D8A23E",g:"★"},{k:"cost",nm:"Quote",ro:"Estimates cost & savings",c:"#3B7DD8",g:"$"},{k:"travel",nm:"Navigator",ro:"Flights, routes & timing",c:"#E8623D",g:"✈"},{k:"visa",nm:"Gatekeeper",ro:"Visa, permits & fit-to-fly",c:"#7C5BD8",g:"⎙"},{k:"concierge",nm:"Concierge",ro:"Contacts & aftercare",c:"#1F9E78",g:"☎"}];
+function AgentGrid({agents}){return(<div className="fleet">{AGENT_META.map(a=>{const b=!!agents[a.k];return(<div key={a.k} className={"agent"+(b?" busy":"")}><div className="top"><div className="aorb" style={{background:a.c}}>{a.g}</div><span className={"status"+(b?" busy":"")}>{b?"working":"idle"}</span></div><div className="nm">{a.nm}</div><div className="ro">{a.ro}</div></div>);})}</div>);}
+function TelemetryLog({log,logRef}){return(<div className="log" ref={logRef}>{log.length===0&&<div style={{color:"#5C7E79"}}>// fleet idle — deploy agents to begin streaming</div>}{log.map((l,i)=>(<div className="ln" key={i}><span className="t">{l.t}</span><span className={"tag"+(l.kind?" "+l.kind:"")}>[{l.tag}]</span><span style={{color:"#CFE8E3"}}>{l.msg}</span></div>))}</div>);}
+
+/* ---------------- Catalogue ---------------- */
+function Catalogue({filtered,fTreat,setFTreat,fCountry,setFCountry,q,setQ,countries,openProvider}){
+  return (<div className="grid" style={{gridTemplateColumns:"1fr"}}>
+    <div className="card" style={{padding:14}}><div className="toolbar">
+      <div className="field" style={{flex:2}}><label>Search</label><div style={{position:"relative"}}><span style={{position:"absolute",left:11,top:11,color:"var(--mist)"}}>{I.search}</span><input className="txt" style={{paddingLeft:32}} placeholder="Name, city or country" value={q} onChange={e=>setQ(e.target.value)}/></div></div>
+      <div className="field"><label>Treatment</label><select value={fTreat} onChange={e=>setFTreat(e.target.value)}><option>All</option>{TREATMENTS.map(t=><option key={t}>{t}</option>)}</select></div>
+      <div className="field"><label>Country</label><select value={fCountry} onChange={e=>setFCountry(e.target.value)}><option>All</option>{countries.map(c=><option key={c}>{c}</option>)}</select></div>
+    </div></div>
+    {filtered.length===0?<div className="card empty">No providers match. Deploy the agents to expand the catalogue.</div>:
+      <div className="grid" style={{gridTemplateColumns:"1fr"}}>{filtered.map(p=>(
+        <button key={p.id} className="card provider" onClick={()=>openProvider(p)} style={{textAlign:"left",width:"100%"}}>
+          <div className="pv-flag">{flagFor(p.country)}</div>
+          <div className="pv-main"><div className="row" style={{gap:8}}><p className="pv-name">{p.name}</p>{p.verified?<span className="chip" style={{fontSize:10}}>✓ verified</span>:<span className="chip sig" style={{fontSize:10}}>lead</span>}</div>
+            <div className="pv-loc">{p.city}, {p.country} · {p.lead}</div>
+            <div className="pv-tags">{p.treatments.slice(0,3).map(t=><span key={t} className="chip gray">{t}</span>)}{p.accred?.map(a=><span key={a} className="chip amber">{a}</span>)}{p.cost&&p.cost!=="—"&&<span className="chip">{p.cost}</span>}</div></div>
+          <div className="pv-rating"><div className="num">{Number(p.rating).toFixed(1)}</div><div className="stars">{"★".repeat(Math.round(p.rating))}{"☆".repeat(5-Math.round(p.rating))}</div><div className="src">{Object.keys(p.sources||{}).length||"—"} sources</div></div>
+        </button>))}</div>}
+  </div>);
+}
+
+/* ---------------- Provider drawer ---------------- */
+function ProviderDrawer({p,onClose,onVerify,onJourney}){
+  const [busy,setBusy]=useState(false);const srcs=Object.entries(p.sources||{});
+  return (<><div className="scrim" onClick={onClose}/><div className="drawer"><div className="dwrap">
+    <div className="row" style={{justifyContent:"space-between"}}><span className="eyebrow">Provider dossier</span><button className="btn ghost sm" onClick={onClose}>{I.x}</button></div>
+    <div className="dhead" style={{marginTop:10}}><div className="pv-flag" style={{width:54,height:54,fontSize:26}}>{flagFor(p.country)}</div>
+      <div><div className="pv-name" style={{fontSize:20}}>{p.name}</div><div className="pv-loc">{p.city}, {p.country} · hub {hubFor(p.country)}</div>
+        <div className="pv-tags" style={{marginTop:8}}>{p.accred?.map(a=><span key={a} className="chip amber">{a}</span>)}{p.cost&&p.cost!=="—"&&<span className="chip">est. {p.cost}</span>}</div></div></div>
+    {p.note&&<div className="banner info" style={{marginTop:14}}>ℹ️ <span>{p.note}</span></div>}
+    <hr className="sep"/><div className="row" style={{justifyContent:"space-between"}}><div className="eyebrow">Aggregated rating</div><span style={{display:"flex",gap:7,alignItems:"baseline"}}><b className="disp" style={{fontSize:24}}>{Number(p.rating).toFixed(1)}</b><span style={{color:"var(--amber)"}}>{"★".repeat(Math.round(p.rating))}</span></span></div>
+    <div style={{marginTop:10}}>{srcs.length?srcs.map(([k,v])=>(<div className="barrow" key={k}><span className="k">{k}</span><span className="bar"><i style={{width:`${(v/5)*100}%`}}/></span><span className="v">{Number(v).toFixed(1)}</span></div>)):<div className="muted" style={{fontSize:12}}>No breakdown yet — verify to pull live ratings.</div>}</div>
+    <hr className="sep"/><div className="eyebrow" style={{marginBottom:8}}>Treatments</div><div className="pv-tags">{p.treatments.map(t=><span key={t} className="chip gray">{t}</span>)}</div>
+    <hr className="sep"/><div className="eyebrow" style={{marginBottom:8}}>References & sources</div>
+    {(p.weblinks&&p.weblinks.length)?p.weblinks.map((r,i)=>(<div className="srclink" key={i}><span>{r.label||r.url}</span>{r.url&&<a href={r.url} target="_blank" rel="noreferrer">open ↗</a>}</div>)):(p.refs||[]).map((r,i)=>(<div className="srclink" key={i}><span>{r}</span><span className="muted" style={{fontSize:11}}>reference</span></div>))}
+    <hr className="sep"/><div className="row" style={{gap:10}}>
+      <button className="btn signal" disabled={busy} onClick={async()=>{setBusy(true);await onVerify(p);setBusy(false);}}>{busy?<><span className="spin"></span>Verifying…</>:"Verify live (web)"}</button>
+      <button className="btn" onClick={()=>onJourney(p)}>Plan journey →</button></div>
+    <div className="muted" style={{fontSize:11,marginTop:12}}>Ratings & costs are AI-aggregated research estimates. Confirm credentials, outcomes and pricing directly with the hospital and your clinician.</div>
+  </div></div></>);
+}
+
+/* ---------------- Journey ---------------- */
+function Journey({providers,jProvider,setJProvider,origin,setOrigin,planJourney,jPlan,jBusy}){
+  const p=jProvider;
+  return (<div className="grid" style={{gridTemplateColumns:"1fr"}}>
+    <div className="card" style={{padding:18}}><div className="eyebrow">Plan a medical journey</div><div className="h2" style={{marginBottom:14}}>Flights · visas · permissions · contacts</div>
+      <div className="toolbar">
+        <div className="field"><label>Travelling from</label><select value={origin} onChange={e=>setOrigin(e.target.value)}>{ORIGINS.map(o=><option key={o}>{o}</option>)}</select></div>
+        <div className="field" style={{flex:2}}><label>Destination provider</label><select value={p?.id||""} onChange={e=>setJProvider(providers.find(x=>x.id===e.target.value)||null)}><option value="">Choose a provider…</option>{providers.map(x=><option key={x.id} value={x.id}>{x.name} — {x.city}, {x.country}</option>)}</select></div>
+        <button className="btn" disabled={!p||jBusy} onClick={()=>planJourney(p)} style={{height:40}}>{jBusy?<><span className="spin"></span>Planning…</>:"Plan journey"}</button>
+      </div></div>
+    {!p&&<div className="card empty">Pick a provider — the Navigator, Gatekeeper & Concierge agents assemble the full trip.</div>}
+    {p&&!jPlan&&!jBusy&&<div className="card empty">Ready to plan {p.name}. Press <b>Plan journey</b>.</div>}
+    {jPlan&&p&&(<>
+      <div className="grid" style={{gridTemplateColumns:"1fr 1fr",alignItems:"start"}}>
+        <div className="card" style={{padding:18}}><div className="eyebrow">{I.plane} Flights</div><div className="h2" style={{fontSize:16,marginBottom:8}}>{jPlan.flights?.route}</div><p className="muted" style={{fontSize:13}}>Hub: {jPlan.flights?.hub} · {jPlan.flights?.typicalHours}</p><p style={{fontSize:13,marginTop:6}}>{jPlan.flights?.note}</p><hr className="sep"/><div className="eyebrow" style={{marginBottom:8}}>Length of stay</div><p style={{fontSize:13}}><b>{jPlan.stay?.totalDays}</b> total · {jPlan.stay?.hospitalDays} inpatient · {jPlan.stay?.recovery}</p></div>
+        <div className="card" style={{padding:18}}><div className="eyebrow">⎙ Visa & permissions</div><p style={{fontSize:13.5,fontWeight:600,marginTop:6}}>{jPlan.visa?.type}</p><p className="muted" style={{fontSize:12.5,marginTop:2}}>{jPlan.visa?.medicalVisa}</p><div style={{marginTop:10}}>{(jPlan.visa?.docs||[]).map((d,i)=><div className="ck" key={i} style={{padding:"7px 11px"}}><span className="box" style={{background:"var(--jade)"}}>{I.check}</span>{d}</div>)}</div><hr className="sep"/><div className="eyebrow" style={{marginBottom:6}}>Fit-to-fly & clearances</div>{(jPlan.permissions||[]).map((x,i)=><p key={i} style={{fontSize:12.5,margin:"4px 0",paddingLeft:14,position:"relative"}}><span style={{position:"absolute",left:0,color:"var(--signal)"}}>›</span>{x}</p>)}</div>
+      </div>
+      <div className="grid" style={{gridTemplateColumns:"1fr 1fr",alignItems:"start"}}>
+        <div className="card" style={{padding:18}}><div className="eyebrow" style={{marginBottom:10}}>☎ Locate your contacts</div>{(jPlan.contacts||[]).map((c,i)=>(<div key={i} className="srclink"><span><b style={{fontSize:12.5}}>{c.role}</b><br/><span className="muted" style={{fontSize:12}}>{c.detail}</span></span></div>))}</div>
+        <div className="card" style={{padding:18}}><div className="eyebrow" style={{marginBottom:10}}>Pre-departure checklist</div>{(jPlan.checklist||[]).map((c,i)=><div className="ck" key={i}><span className="box">{I.check}</span>{c}</div>)}</div>
+      </div>
+      <div className="muted" style={{fontSize:11,textAlign:"center"}}>Visa, fit-to-fly and entry rules change and depend on nationality — confirm with the embassy, your airline and your doctor.</div>
+    </>)}
+  </div>);
+}
+
+/* ---------------- Vault (patient PHI) ---------------- */
+function Vault({me,setPatients,logAudit}){
+  const [shown,setShown]=useState({});
+  const reveal=(i,k)=>{setShown(s=>({...s,[i]:!s[i]}));if(!shown[i])logAudit("revealed field",`${k} (own record)`,3);};
+  const toggleConsent=(idx)=>{setPatients(ps=>ps.map((p,i)=>i===0?{...p,consents:p.consents.map((c,j)=>j===idx?{...c,on:!c.on}:c)}:p));logAudit("consent changed",me.consents[idx].to,2);};
+  return (<div className="grid" style={{gridTemplateColumns:"1fr"}}>
+    <div className="banner sec">{I.lock}<span><b>Encrypted vault (simulated).</b> Fields are masked by default; revealing one is recorded in the audit log. This prototype does not provide real cryptographic protection — don't store real PHI. Production needs a HIPAA/Privacy-Act-eligible backend with a signed BAA.</span></div>
+    <div className="card" style={{padding:18}}>
+      <div className="row" style={{justifyContent:"space-between",marginBottom:6}}><div><div className="eyebrow">Record · {me.mrn}</div><div className="h2" style={{fontSize:17}}>Personal health information</div></div>
+        <div className="row" style={{gap:6}}>{LV.map(([t,,n])=><span key={t} className={`lv lv${n}`}>{t}</span>)}</div></div>
+      <div style={{marginTop:12}}>{me.fields.map((f,i)=>(
+        <div className="kv" key={i}><span className="k">{f.k}</span><span className={`lv lv${f.lv}`}>{LV[f.lv][0]}</span>
+          <span className="v">{shown[i]?f.v:mask(f.v)}</span>
+          <button className="reveal" onClick={()=>reveal(i,f.k)}>{shown[i]?"hide":"reveal"}</button></div>))}</div>
+    </div>
+    <div className="card" style={{padding:18}}>
+      <div className="eyebrow" style={{marginBottom:4}}>Consent</div><div className="h2" style={{fontSize:16,marginBottom:10}}>Who can see your data</div>
+      {me.consents.length===0&&<div className="muted" style={{fontSize:13}}>No sharing consents yet.</div>}
+      {me.consents.map((c,i)=>(<div className="kv" key={i}><span className="k" style={{width:160}}>{c.to}</span><span className="v" style={{fontFamily:"inherit"}}>{c.scope}</span>
+        <button className={"btn sm "+(c.on?"":"ghost")} onClick={()=>toggleConsent(i)}>{c.on?"Sharing ✓":"Share"}</button></div>))}
+      <div className="muted" style={{fontSize:11,marginTop:8}}>You can withdraw consent at any time; changes are logged.</div>
+    </div>
+  </div>);
+}
+
+/* ---------------- Admin records ---------------- */
+function AdminRecords({patients,logAudit}){
+  const [open,setOpen]=useState(null);const [shown,setShown]=useState({});
+  const view=p=>{setOpen(p);setShown({});logAudit("opened record",`${p.name} · ${p.mrn}`,3);};
+  const reveal=(i,k,p)=>{setShown(s=>({...s,[i]:!s[i]}));if(!shown[i])logAudit("revealed PHI",`${p.name} · ${k}`,3);};
+  return (<div className="grid" style={{gridTemplateColumns:"1fr"}}>
+    <div className="banner sec">{I.shield}<span><b>Access-controlled (RBAC).</b> Every open & reveal here is written to the audit log with a P3 classification. Minimum-necessary access applies in production. Demo data only.</span></div>
+    <div className="card" style={{padding:0,overflow:"auto"}}>
+      <table className="tbl"><thead><tr><th>Subscriber</th><th>MRN</th><th>Region</th><th>Plan</th><th>Status</th><th></th></tr></thead>
+        <tbody>{patients.map(p=>(<tr key={p.id}><td><b>{p.name}</b></td><td className="mono" style={{fontSize:12}}>{p.mrn}</td><td>{p.region}</td><td><span className="chip gray">{PLANS.find(x=>x.id===p.plan)?.name||p.plan}</span></td><td>{p.status}</td><td style={{textAlign:"right"}}><button className="btn ghost sm" onClick={()=>view(p)}>{I.lock} Open</button></td></tr>))}</tbody></table>
+    </div>
+    {open&&(<><div className="scrim" onClick={()=>setOpen(null)}/><div className="drawer"><div className="dwrap">
+      <div className="row" style={{justifyContent:"space-between"}}><span className="eyebrow">Patient record · {open.mrn}</span><button className="btn ghost sm" onClick={()=>setOpen(null)}>{I.x}</button></div>
+      <div className="h2" style={{margin:"8px 0 2px"}}>{open.name}</div><div className="muted" style={{fontSize:12.5}}>{open.region} · {PLANS.find(x=>x.id===open.plan)?.name}</div>
+      <div className="banner sec" style={{margin:"14px 0"}}>{I.lock}<span>Reveals are audited. Justify access under minimum-necessary.</span></div>
+      {open.fields.map((f,i)=>(<div className="kv" key={i}><span className="k">{f.k}</span><span className={`lv lv${f.lv}`}>{LV[f.lv][0]}</span><span className="v">{shown[i]?f.v:mask(f.v)}</span><button className="reveal" onClick={()=>reveal(i,f.k,open)}>{shown[i]?"hide":"reveal"}</button></div>))}
+    </div></div></>)}
+  </div>);
+}
+
+/* ---------------- Donor registry ---------------- */
+function DonorRegistry({donors,setDonors,role,logAudit}){
+  const [region,setRegion]=useState("");const [blood,setBlood]=useState("O+");const [intent,setIntent]=useState("Bone marrow / stem cells");
+  const add=()=>{if(!region.trim())return;const d={id:"DNR-"+(1000+Math.floor(Math.random()*9000)),region:region.trim(),blood,intent,consent:"Pending review",authority:"Route to national authority"};setDonors(ds=>[d,...ds]);logAudit("donor registered",`${d.id} · ${d.region}`,2);setRegion("");};
+  return (<div className="grid" style={{gridTemplateColumns:"1fr"}}>
+    <div className="banner warn">{I.heart}<span><b>Consent & awareness registry only.</b> Actual organ/tissue allocation is performed exclusively by accredited national authorities (e.g. OrganMatch/AOTA in Australia, NOTTO in India, UNOS in the US). This module records donation <i>intent</i> and routes verified cases to those bodies. Commercial trade in organs is illegal and not supported here.</span></div>
+    <div className="card" style={{padding:18}}>
+      <div className="eyebrow">Register donation intent</div><div className="h2" style={{fontSize:16,marginBottom:12}}>Add a donor by region</div>
+      <div className="toolbar">
+        <div className="field" style={{flex:2}}><label>Region</label><input className="txt" placeholder="e.g. NSW, Australia" value={region} onChange={e=>setRegion(e.target.value)}/></div>
+        <div className="field"><label>Blood type</label><select value={blood} onChange={e=>setBlood(e.target.value)}>{["O+","O−","A+","A−","B+","B−","AB+","AB−"].map(b=><option key={b}>{b}</option>)}</select></div>
+        <div className="field" style={{flex:2}}><label>Donation intent</label><select value={intent} onChange={e=>setIntent(e.target.value)}>{["Bone marrow / stem cells","Blood / plasma","Kidney — living, directed","Liver — living, related","Deceased-donor consent","Tissue (cornea, skin, bone)"].map(o=><option key={o}>{o}</option>)}</select></div>
+        <button className="btn" onClick={add} style={{height:40}}>Register</button>
+      </div>
+    </div>
+    <div className="card" style={{padding:0,overflow:"auto"}}>
+      <table className="tbl"><thead><tr><th>Donor ID</th><th>Region</th><th>Blood</th><th>Intent</th><th>Consent</th><th>Authority</th>{role==="admin"&&<th></th>}</tr></thead>
+        <tbody>{donors.map(d=>(<tr key={d.id}><td className="mono" style={{fontSize:12}}>{d.id}</td><td>{d.region}</td><td><span className="chip gray">{d.blood}</span></td><td>{d.intent}</td>
+          <td><span className={"chip "+(d.consent==="Verified"?"":d.consent==="Registered"?"amber":"sig")}>{d.consent}</span></td><td className="muted" style={{fontSize:12}}>{d.authority}</td>
+          {role==="admin"&&<td style={{textAlign:"right"}}>{d.consent!=="Verified"?<button className="btn ghost sm" onClick={()=>{setDonors(ds=>ds.map(x=>x.id===d.id?{...x,consent:"Verified"}:x));logAudit("donor verified",d.id,2);}}>Verify</button>:<span className="muted" style={{fontSize:11}}>✓</span>}</td>}</tr>))}</tbody></table>
+    </div>
+  </div>);
+}
+
+/* ---------------- Complaints ---------------- */
+function Complaints({complaints,setComplaints,logAudit}){
+  const [cat,setCat]=useState("Privacy / HIPAA");const [sev,setSev]=useState("Medium");const [text,setText]=useState("");
+  const file=()=>{if(!text.trim())return;const c={id:uid("C"),patient:"Demo Subscriber",category:cat,severity:sev,status:"Open",text:text.trim(),when:new Date().toISOString().slice(0,10)};setComplaints(cs=>[c,...cs]);logAudit("complaint filed",cat,2);setText("");};
+  const setStatus=(id,status)=>{setComplaints(cs=>cs.map(c=>c.id===id?{...c,status}:c));logAudit("complaint status",`${id} → ${status}`,1);};
+  return (<div className="grid" style={{gridTemplateColumns:"1fr"}}>
+    <div className="banner info">{I.msg}<span>Privacy complaints can also be lodged with the regulator directly — the U.S. HHS Office for Civil Rights (HIPAA) or, in Australia, the OAIC. This intake tracks them internally and securely.</span></div>
+    <div className="card" style={{padding:18}}>
+      <div className="eyebrow">New complaint</div><div className="h2" style={{fontSize:16,marginBottom:12}}>File a grievance</div>
+      <div className="toolbar">
+        <div className="field"><label>Category</label><select value={cat} onChange={e=>setCat(e.target.value)}>{["Privacy / HIPAA","Data access","Billing","Care quality","Consent"].map(o=><option key={o}>{o}</option>)}</select></div>
+        <div className="field"><label>Severity</label><select value={sev} onChange={e=>setSev(e.target.value)}>{["Low","Medium","High"].map(o=><option key={o}>{o}</option>)}</select></div>
+      </div>
+      <div className="field" style={{marginTop:10}}><label>Details</label><textarea className="txt" placeholder="Describe the issue…" value={text} onChange={e=>setText(e.target.value)}/></div>
+      <button className="btn" style={{marginTop:10}} onClick={file}>Submit complaint</button>
+    </div>
+    <div className="card" style={{padding:0,overflow:"auto"}}>
+      <table className="tbl"><thead><tr><th>ID</th><th>From</th><th>Category</th><th>Severity</th><th>Filed</th><th>Status</th><th></th></tr></thead>
+        <tbody>{complaints.map(c=>(<tr key={c.id}><td className="mono" style={{fontSize:11}}>{c.id}</td><td>{c.patient}</td><td>{c.category}</td>
+          <td><span className={"chip "+(c.severity==="High"?"sig":c.severity==="Medium"?"amber":"gray")}>{c.severity}</span></td><td className="muted">{c.when}</td>
+          <td><span className="chip gray">{c.status}</span></td>
+          <td style={{textAlign:"right"}}><select value={c.status} onChange={e=>setStatus(c.id,e.target.value)} style={{width:130,padding:"6px 8px",fontSize:12}}>{["Open","In review","Resolved"].map(s=><option key={s}>{s}</option>)}</select></td></tr>))}</tbody></table>
+    </div>
+  </div>);
+}
+
+/* ---------------- Compliance center ---------------- */
+function Compliance({conns,audit}){
+  const controls=[["Role-based access control","Patient vs admin interfaces with scoped views","ok"],["Audit logging","Every record open/reveal/consent change recorded","ok"],["Encryption in transit","API calls over HTTPS/TLS","ok"],["Data classification","P0–P3 sensitivity tags on every field","ok"],["Consent management","Patient-controlled sharing toggles","ok"],["Encryption at rest","Requires HIPAA-eligible backend (not in prototype)","todo"],["Signed BAA with vendors","Not in place — consumer API is not BAA-covered","todo"],["Breach notification plan","Define before production","todo"]];
+  return (<div className="grid" style={{gridTemplateColumns:"1fr"}}>
+    <div className="banner sec">{I.shield}<span><b>HIPAA-aware prototype.</b> The controls below model the safeguards a compliant system needs. Items marked “to build” require a backend and legal agreements before any real PHI is handled. Note: HIPAA is U.S.-specific — in Australia the governing framework is the <b>Privacy Act 1988 / Australian Privacy Principles</b>, overseen by the OAIC.</span></div>
+    <div className="grid" style={{gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))"}}>
+      {controls.map(([t,d,s])=>(<div className="card" style={{padding:16}} key={t}>
+        <div className="row" style={{justifyContent:"space-between"}}><b style={{fontSize:13.5}}>{t}</b><span className={"chip "+(s==="ok"?"":"sig")}>{s==="ok"?"✓ active":"to build"}</span></div>
+        <p className="muted" style={{fontSize:12.5,margin:"6px 0 0"}}>{d}</p></div>))}
+    </div>
+    <div className="card" style={{padding:18}}>
+      <div className="eyebrow" style={{marginBottom:6}}>Connector compliance</div>
+      <p className="muted" style={{fontSize:13}}>Before going live, each external connection in API connections must carry a data-processing/BAA agreement. Currently connected: {Object.entries(conns).filter(([,v])=>v).map(([k])=>k).join(", ")||"none"}.</p>
+    </div>
+  </div>);
+}
+
+/* ---------------- API connections ---------------- */
+function Connections({conns,setConns,logAudit}){
+  const list=[["agents","AI Agent Fleet","Anthropic API — discovery, ratings & journey agents","Live in Claude preview"],["fhir","EHR / FHIR","Sync patient records via FHIR R4","Configure endpoint"],["stripe","Stripe Billing","Subscriptions & invoices","Add secret key (backend)"],["transplant","Transplant authority","Route donor consent to national body","Per-region API"],["sso","Identity / SSO","SAML / OAuth sign-in","Connect IdP"]];
+  const toggle=k=>{setConns(c=>({...c,[k]:!c[k]}));logAudit("connector toggled",k,1);};
+  return (<div className="grid" style={{gridTemplateColumns:"1fr"}}>
+    <div className="banner info">{I.plug}<span>The app is API-driven. The agent fleet is live here; other connectors are scaffolding — wire real endpoints + secrets in your backend before production.</span></div>
+    <div className="grid" style={{gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))"}}>
+      {list.map(([k,nm,desc,hint])=>(<div className="card" style={{padding:16}} key={k}>
+        <div className="row" style={{justifyContent:"space-between"}}><b style={{fontSize:14}}>{nm}</b><span className={"chip "+(conns[k]?"":"gray")}>{conns[k]?"● connected":"○ off"}</span></div>
+        <p className="muted" style={{fontSize:12.5,margin:"6px 0 10px"}}>{desc}</p>
+        <input className="txt" style={{marginBottom:10,fontSize:12}} placeholder={hint} disabled={k==="agents"} defaultValue={k==="agents"?"https://api.anthropic.com/v1/messages":""}/>
+        <button className={"btn sm "+(conns[k]?"ghost":"")} onClick={()=>toggle(k)} disabled={k==="agents"}>{k==="agents"?"Managed":conns[k]?"Disconnect":"Connect"}</button>
+      </div>))}
+    </div>
+  </div>);
+}
+
+/* ---------------- Audit log ---------------- */
+function AuditLog({audit}){
+  return (<div className="grid" style={{gridTemplateColumns:"1fr"}}>
+    <div className="banner info">{I.list}<span>Append-only access trail. In production this writes to a tamper-evident store with retention controls.</span></div>
+    <div className="card" style={{padding:0,overflow:"auto"}}>
+      <table className="tbl"><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Target</th><th>Class</th></tr></thead>
+        <tbody>{audit.map((a,i)=>(<tr key={i}><td className="mono" style={{fontSize:11,color:"var(--mist)"}}>{a.t}</td><td className="mono" style={{fontSize:12}}>{a.actor}</td><td>{a.action}</td><td className="muted">{a.target}</td><td><span className={`lv lv${a.lv}`}>{LV[a.lv][0]}</span></td></tr>))}</tbody></table>
+    </div>
+  </div>);
+}
+
+/* ---------------- Subscribers ---------------- */
+function Subscribers({patients}){
+  return (<div className="card" style={{padding:0,overflow:"auto"}}>
+    <table className="tbl"><thead><tr><th>Subscriber</th><th>Region</th><th>Plan</th><th>MRN</th><th>Status</th></tr></thead>
+      <tbody>{patients.map(p=>(<tr key={p.id}><td><b>{p.name}</b></td><td>{p.region}</td><td><span className="chip">{PLANS.find(x=>x.id===p.plan)?.name||p.plan}</span></td><td className="mono" style={{fontSize:12}}>{p.mrn}</td><td>{p.status}</td></tr>))}</tbody></table>
+  </div>);
+}
+
+/* ---------------- Subscription ---------------- */
+function Subscription({plan,setPlan,logAudit}){
+  return (<div className="grid" style={{gridTemplateColumns:"1fr"}}>
+    <div className="card" style={{padding:18}}><div className="eyebrow">Current plan</div><div className="h2">{PLANS.find(p=>p.id===plan).name} · {PLANS.find(p=>p.id===plan).price}{PLANS.find(p=>p.id===plan).per||""}</div><p className="muted" style={{fontSize:12.5,marginTop:6}}>Change anytime. Real billing needs a Stripe backend — this updates entitlements instantly for the demo.</p></div>
+    <div className="plans">{PLANS.map(p=>(<div className={"plan"+(p.id===plan?" cur":"")} key={p.id}>
+      <div className="pn">{p.name}</div><div className="muted" style={{fontSize:12}}>{p.tagline}</div>
+      <div className="pp">{p.price}<small>{p.per||""}</small></div>
+      <ul>{p.feat.map(f=><li key={f}>{f}</li>)}</ul>
+      {p.id===plan?<button className="btn ghost" disabled>Current plan</button>:<button className="btn" onClick={()=>{setPlan(p.id);logAudit("plan changed",p.name,1);}}>{p.id==="explorer"?"Switch":"Upgrade"} to {p.name}</button>}
+    </div>))}</div>
+    <div className="muted" style={{fontSize:11,textAlign:"center"}}>Prices illustrative (AUD). Payment, proration and invoicing require a billing provider in production.</div>
+  </div>);
+}
+
+/* ---------------- Gate ---------------- */
+function Gate({feature,need,onUp}){
+  return (<div className="gate"><div className="lock">{I.lock}</div><div className="h2" style={{fontSize:18}}>{feature} is a {need} feature</div>
+    <p className="muted" style={{fontSize:13,maxWidth:420,margin:"8px auto 16px"}}>Upgrade your subscription to unlock this. You can switch plans instantly in the demo.</p>
+    <button className="btn" onClick={onUp}>{I.card} View plans</button></div>);
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+
+var _b=document.getElementById("boot"); if(_b) _b.remove();
+</script>
+</body>
+</html>
